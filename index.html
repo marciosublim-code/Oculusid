@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#534AB7">
+<meta name="description" content="Identifique as medidas do seu óculos de grau com IA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ÓculosID">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>ÓculosID — Medidas de óculos com IA</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4ff;min-height:100vh;color:#2C2C2A;overscroll-behavior:none}
+
+  /* HEADER */
+  .header{background:linear-gradient(135deg,#534AB7,#7F77DD);color:#fff;padding:env(safe-area-inset-top,12px) 1rem 1rem;padding-top:calc(env(safe-area-inset-top,0px) + 14px);display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+  .header-icon{width:38px;height:38px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .header h1{font-size:17px;font-weight:700;letter-spacing:-0.3px}
+  .header span{font-size:12px;opacity:.75;display:block;margin-top:1px}
+
+  /* TABS */
+  .tabs{display:flex;background:#fff;border-bottom:1px solid #E8E6FF;position:sticky;top:68px;z-index:9;box-shadow:0 2px 8px rgba(83,74,183,.06)}
+  .tab{flex:1;padding:.7rem .4rem;font-size:12px;font-weight:500;color:#888780;border:none;background:none;cursor:pointer;border-bottom:2.5px solid transparent;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .tab svg,.tab i{font-size:18px}
+  .tab.active{color:#534AB7;border-bottom-color:#534AB7;background:#faf9ff}
+
+  /* SCREENS */
+  .screen{display:none;padding:1rem;padding-bottom:2rem;min-height:calc(100vh - 130px)}
+  .screen.active{display:block}
+
+  /* CARDS */
+  .card{background:#fff;border-radius:16px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 8px rgba(83,74,183,.08)}
+  .card-title{font-size:13px;font-weight:700;color:#534AB7;margin-bottom:.85rem;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.4px}
+  .card-title svg{width:16px;height:16px;stroke:#7F77DD;fill:none;stroke-width:2}
+
+  /* PHOTO AREA */
+  .photo-area{border:2px dashed #AFA9EC;border-radius:14px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:.2s;background:#faf9ff;margin-bottom:1rem;user-select:none}
+  .photo-area:active{background:#EEEDFE;border-color:#534AB7}
+  .photo-area .icon{font-size:40px;margin-bottom:.6rem;display:block}
+  .photo-area p{font-size:14px;color:#534AB7;font-weight:600}
+  .photo-area small{font-size:11px;color:#888;margin-top:5px;display:block}
+  #photo-preview{width:100%;border-radius:12px;display:none;margin-bottom:1rem;max-height:280px;object-fit:cover}
+
+  /* BUTTONS */
+  .btn{width:100%;padding:.9rem;border-radius:12px;border:none;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-.1px}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:#534AB7;color:#fff;box-shadow:0 4px 14px rgba(83,74,183,.35)}
+  .btn-secondary{background:#EEEDFE;color:#534AB7;margin-top:.6rem}
+  .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+  /* RESULTS */
+  .measure-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
+  .measure-item{background:#faf9ff;border-radius:14px;padding:1rem;text-align:center;border:1.5px solid #EEEDFE}
+  .measure-item .val{font-size:30px;font-weight:800;color:#534AB7;line-height:1}
+  .measure-item .unit{font-size:10px;color:#7F77DD;margin-top:2px;font-weight:600;letter-spacing:.5px}
+  .measure-item .label{font-size:12px;color:#3C3489;font-weight:600;margin-top:.45rem}
+  .measure-item .info{font-size:10px;color:#9390D0;margin-top:3px}
+  .measure-item.full{grid-column:1/-1}
+  .result-box{background:#EEEDFE;border-radius:12px;padding:1rem}
+  .result-box h4{font-size:12px;font-weight:700;color:#3C3489;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.4px}
+  .compat-badge{display:inline-flex;align-items:center;gap:5px;padding:.4rem .75rem;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:.5rem;margin-right:.4rem}
+  .compat-badge.good{background:#EAF3DE;color:#27500A}
+  .compat-badge.ok{background:#FAEEDA;color:#633806}
+  .compat-badge.tip{background:#E6F1FB;color:#0C447C}
+  .total-width{font-size:12px;color:#534AB7;margin-top:.6rem;font-weight:500}
+
+  /* FIELDS (manual) */
+  .field-group{margin-bottom:.75rem}
+  .field-label{font-size:12px;font-weight:600;color:#534AB7;margin-bottom:.35rem;display:flex;align-items:center;gap:5px}
+  .field-wrap{display:flex;align-items:center;gap:.5rem}
+  .field-wrap input{flex:1;padding:.7rem .85rem;border:1.5px solid #CECBF6;border-radius:10px;font-size:18px;font-weight:700;color:#2C2C2A;background:#fff;outline:none;-moz-appearance:textfield;appearance:textfield}
+  .field-wrap input::-webkit-outer-spin-button,.field-wrap input::-webkit-inner-spin-button{-webkit-appearance:none}
+  .field-wrap input:focus{border-color:#534AB7;box-shadow:0 0 0 3px rgba(83,74,183,.15)}
+  .field-wrap .unit-lbl{font-size:13px;color:#888;font-weight:500;min-width:24px}
+
+  /* EXPLAIN */
+  .explain-list{display:flex;flex-direction:column;gap:.85rem}
+  .explain-item{display:flex;gap:.85rem;align-items:flex-start}
+  .explain-icon{width:40px;height:40px;border-radius:12px;background:#EEEDFE;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
+  .explain-text h3{font-size:13px;font-weight:700;color:#2C2C2A;margin-bottom:3px}
+  .explain-text p{font-size:12px;color:#5F5E5A;line-height:1.55}
+  .code-ex{display:inline-block;background:#2C2C2A;color:#AFA9EC;padding:.25rem .6rem;border-radius:6px;font-family:monospace;font-size:13px;font-weight:700;letter-spacing:.5px}
+
+  /* STATES */
+  .loading{text-align:center;padding:2rem 1rem;color:#534AB7}
+  .loading-spinner{width:36px;height:36px;border:3px solid #EEEDFE;border-top-color:#534AB7;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto .75rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-box{background:#FCEBEB;border-radius:12px;padding:1rem;color:#501313;font-size:13px;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+
+  .formato-btn{padding:.6rem .5rem;border-radius:10px;border:1.5px solid #CECBF6;background:#fff;font-size:12px;font-weight:600;color:#534AB7;cursor:pointer;transition:.15s;text-align:center}
+  .formato-btn.active{background:#534AB7;color:#fff;border-color:#534AB7}
+  .formato-btn:active{transform:scale(.96)}
+
+  /* TIP */
+  .tip-box{background:#E1F5EE;border-radius:10px;padding:.75rem;font-size:12px;color:#085041;display:flex;gap:7px;margin-bottom:1rem;line-height:1.5}
+
+  /* INSTALL BANNER */
+  #install-banner{display:none;background:#534AB7;color:#fff;padding:.8rem 1rem;align-items:center;gap:.6rem;cursor:pointer;border-bottom:1px solid #3C3489}
+  #install-banner span{flex:1;font-size:13px;font-weight:500}
+  #install-banner button{background:#fff;color:#534AB7;border:none;border-radius:8px;padding:.35rem .85rem;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+
+  /* API KEY MODAL */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+  .modal-backdrop.hidden{display:none}
+  .modal{background:#fff;border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px}
+  .modal h2{font-size:17px;font-weight:700;color:#2C2C2A;margin-bottom:.5rem}
+  .modal p{font-size:13px;color:#5F5E5A;line-height:1.5;margin-bottom:1rem}
+  .modal input{width:100%;padding:.8rem;border:1.5px solid #CECBF6;border-radius:10px;font-size:14px;font-family:monospace;outline:none;margin-bottom:.75rem}
+  .modal input:focus{border-color:#534AB7}
+  .modal-link{font-size:12px;color:#534AB7;text-decoration:none;display:block;text-align:center;margin-top:.5rem}
+
+  /* LIVE CAMERA */
+  .camera-mode-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
+  .camera-mode-btn{padding:.7rem .5rem;border-radius:10px;border:1.5px solid #CECBF6;background:#fff;font-size:12px;font-weight:600;color:#534AB7;cursor:pointer;transition:.15s;text-align:center;line-height:1.4}
+  .camera-mode-btn.active{background:#534AB7;color:#fff;border-color:#534AB7}
+
+  #live-camera-wrap{display:none;position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:1rem;aspect-ratio:3/4}
+  #live-video{width:100%;height:100%;object-fit:cover;display:block}
+  #face-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .face-guide-oval{width:62%;aspect-ratio:.75;border:3px solid rgba(255,255,255,.5);border-radius:50%;position:relative}
+  .face-guide-oval.too-close{border-color:#FF5E5E;box-shadow:0 0 0 2px rgba(255,94,94,.3)}
+  .face-guide-oval.too-far{border-color:#FFD060;box-shadow:0 0 0 2px rgba(255,208,96,.3)}
+  .face-guide-oval.perfect{border-color:#4CD97B;box-shadow:0 0 0 2px rgba(76,217,123,.3)}
+  #distance-indicator{position:absolute;bottom:0;left:0;right:0;padding:.5rem;text-align:center;font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.7);background:linear-gradient(transparent,rgba(0,0,0,.5))}
+  #capture-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .1s}
+
+  /* RÉGUA */
+  #ruler-overlay{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:4px;z-index:10;animation:rulerIn .3s ease}
+  @keyframes rulerIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  .ruler-bar{height:24px;background:rgba(255,255,255,.95);border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.5);position:relative;min-width:160px}
+  .ruler-tick{position:absolute;bottom:0;width:1.5px;background:#534AB7}
+  .ruler-tick.major{height:16px;width:2px;background:#2C2C2A}
+  .ruler-tick.minor{height:8px;background:#7F77DD}
+  .ruler-label{position:absolute;top:2px;font-size:9px;font-weight:800;color:#2C2C2A;transform:translateX(-50%)}
+  .ruler-caption{font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);letter-spacing:.3px;background:rgba(76,217,123,.85);padding:.2rem .6rem;border-radius:8px}
+
+  /* indicador de ficar parado */
+  #still-indicator{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(76,217,123,.9);color:#fff;font-size:12px;font-weight:700;padding:.3rem .8rem;border-radius:20px;display:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:10;animation:pulse .6s ease infinite alternate}
+  @keyframes pulse{from{opacity:.8}to{opacity:1}}
+
+  .card-ref{background:#f0edff;border:1.5px solid #CECBF6;border-radius:10px;padding:.75rem;font-size:12px;color:#3C3489;display:flex;gap:8px;align-items:center;margin-bottom:1rem;line-height:1.5}
+  .card-ref strong{display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <span>📲 Instalar ÓculosID no celular</span>
+  <button id="install-btn">Instalar</button>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-icon">👓</div>
+  <div>
+    <h1>ÓculosID</h1>
+    <span>Medidas de óculos com IA</span>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('foto',this)">
+    <span style="font-size:20px">📷</span>
+    <span>Foto</span>
+  </button>
+  <button class="tab" onclick="switchTab('manual',this)">
+    <span style="font-size:20px">⌨️</span>
+    <span>Manual</span>
+  </button>
+  <button class="tab" onclick="switchTab('rosto',this)">
+    <span style="font-size:20px">👤</span>
+    <span>Rosto</span>
+  </button>
+  <button class="tab" onclick="switchTab('guia',this)">
+    <span style="font-size:20px">📖</span>
+    <span>Guia</span>
+  </button>
+  <button class="tab" onclick="switchTab('config',this)">
+    <span style="font-size:20px">⚙️</span>
+    <span>Config</span>
+  </button>
+</div>
+
+<!-- TAB: FOTO -->
+<div id="tab-foto" class="screen active">
+  <div class="card">
+    <div class="card-title">📷 Tirar foto da haste</div>
+    <div class="tip-box">
+      💡 Fotografe o lado <strong>interno da haste</strong> ou o aro — onde estão os números impressos, como <span class="code-ex">52□18-140</span>
+    </div>
+    <div class="photo-area" id="photo-area" onclick="document.getElementById('camera-input').click()">
+      <span class="icon">📸</span>
+      <p>Toque para fotografar</p>
+      <small>ou selecionar da galeria</small>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+    <img id="photo-preview" alt="Foto do óculos">
+    <button class="btn btn-primary" id="analisar-btn" onclick="analisarFoto()" disabled>
+      ✨ Analisar com IA
+    </button>
+    <button class="btn btn-secondary" id="trocar-foto-btn" onclick="document.getElementById('camera-input').click()" style="display:none">
+      🔄 Trocar foto
+    </button>
+  </div>
+  <div id="foto-result"></div>
+</div>
+
+<!-- TAB: MANUAL -->
+<div id="tab-manual" class="screen">
+  <div class="card">
+    <div class="card-title">📏 Digitar as medidas</div>
+    <div class="tip-box">
+      💡 Os números estão dentro da haste ou no aro, ex: <span class="code-ex">52□18-140</span>
+    </div>
+    <div class="field-group">
+      <div class="field-label">🔵 Aro / Lente — 1º número</div>
+      <div class="field-wrap">
+        <input type="number" id="m-aro" placeholder="52" min="40" max="70" inputmode="numeric">
+        <span class="unit-lbl">mm</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">🟣 Ponte / Nariz — 2º número</div>
+      <div class="field-wrap">
+        <input type="number" id="m-ponte" placeholder="18" min="10" max="30" inputmode="numeric">
+        <span class="unit-lbl">mm</span>
+      </div>
+    </div>
+    <div class="field-group" style="margin-bottom:1.25rem">
+      <div class="field-label">🟢 Haste / Braço — 3º número</div>
+      <div class="field-wrap">
+        <input type="number" id="m-haste" placeholder="140" min="120" max="165" inputmode="numeric">
+        <span class="unit-lbl">mm</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="analisarManual()">
+      📊 Ver resultado
+    </button>
+  </div>
+  <div id="manual-result"></div>
+</div>
+
+<!-- TAB: ROSTO -->
+<div id="tab-rosto" class="screen">
+  <div class="card">
+    <div class="card-title">📸 Analisar rosto</div>
+    <div class="tip-box">
+      💡 Escolha o modo: câmera ao vivo (distância controlada) ou foto com cartão de crédito como referência de escala.
+    </div>
+
+    <!-- Seleção de modo -->
+    <div class="camera-mode-btns">
+      <button class="camera-mode-btn active" id="modo-live-btn" onclick="setModoCamera('live')">
+        🎥 Câmera ao vivo<br><span style="font-weight:400;font-size:11px">distância guiada</span>
+      </button>
+      <button class="camera-mode-btn" id="modo-cartao-btn" onclick="setModoCamera('cartao')">
+        💳 Foto com cartão<br><span style="font-weight:400;font-size:11px">referência de escala</span>
+      </button>
+    </div>
+
+    <!-- Modo: câmera ao vivo -->
+    <div id="modo-live">
+      <div class="card-ref">
+        <span style="font-size:20px">📏</span>
+        <div>
+          <strong>Como usar</strong>
+          Olhe direto para a câmera. Posicione o rosto dentro da moldura oval até a borda ficar verde e toque em <strong>📸 Capturar</strong>.
+        </div>
+      </div>
+      <div id="live-camera-wrap">
+        <video id="live-video" autoplay playsinline muted></video>
+        <div id="face-overlay">
+          <div class="face-guide-oval" id="face-oval"></div>
+          <div id="ruler-overlay">
+            <div class="ruler-bar" id="ruler-bar" style="width:160px"></div>
+            <div class="ruler-caption">↔ 100 mm — distância ideal ✓</div>
+          </div>
+          <div id="still-indicator">🟢 Fique parado...</div>
+          <div id="distance-indicator">Iniciando câmera...</div>
+        </div>
+        <div id="capture-flash"></div>
+      </div>
+      <button class="btn btn-primary" id="iniciar-camera-btn" onclick="iniciarCameraAoVivo()">
+        🎥 Iniciar câmera ao vivo
+      </button>
+      <button class="btn btn-secondary" id="parar-camera-btn" onclick="pararCamera()" style="display:none">
+        ⏹ Parar câmera
+      </button>
+    </div>
+
+    <!-- Modo: foto com cartão -->
+    <div id="modo-cartao" style="display:none">
+      <div class="card-ref">
+        <span style="font-size:20px">💳</span>
+        <div>
+          <strong>Segure um cartão de crédito na testa</strong>
+          O cartão (85,6 × 54 mm padrão mundial) serve como referência de escala para a IA calcular as medidas reais em mm.
+        </div>
+      </div>
+      <div class="photo-area" id="rosto-area" onclick="document.getElementById('rosto-input').click()">
+        <span class="icon">🤳</span>
+        <p>Selfie com cartão na testa</p>
+        <small>câmera frontal • cartão visível na foto</small>
+      </div>
+      <input type="file" id="rosto-input" accept="image/*" capture="user" style="display:none" onchange="handleRostoFoto(this)">
+      <img id="rosto-preview" alt="Foto do rosto" style="width:100%;border-radius:12px;display:none;margin-bottom:1rem;max-height:280px;object-fit:cover">
+      <button class="btn btn-primary" id="analisar-rosto-btn" onclick="analisarRostoIA()" disabled>
+        ✨ Analisar rosto com IA
+      </button>
+      <button class="btn btn-secondary" id="trocar-rosto-btn" onclick="document.getElementById('rosto-input').click()" style="display:none">
+        🔄 Trocar foto
+      </button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:0">
+    <div class="card-title">✏️ Ou preencha manualmente</div>
+    <div class="field-group">
+      <div class="field-label">↔️ Largura do rosto</div>
+      <div class="field-wrap">
+        <input type="number" id="r-largura" placeholder="140" min="110" max="180" inputmode="numeric">
+        <span class="unit-lbl">mm</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">↕️ Altura do rosto</div>
+      <div class="field-wrap">
+        <input type="number" id="r-altura" placeholder="190" min="140" max="240" inputmode="numeric">
+        <span class="unit-lbl">mm</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">👃 Largura do nariz</div>
+      <div class="field-wrap">
+        <input type="number" id="r-nariz" placeholder="35" min="20" max="60" inputmode="numeric">
+        <span class="unit-lbl">mm</span>
+      </div>
+    </div>
+    <div class="field-group" style="margin-bottom:1.25rem">
+      <div class="field-label">📐 Formato do rosto</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.25rem">
+        <button class="formato-btn" onclick="selecionarFormato('oval',this)">🥚 Oval</button>
+        <button class="formato-btn" onclick="selecionarFormato('redondo',this)">⭕ Redondo</button>
+        <button class="formato-btn" onclick="selecionarFormato('quadrado',this)">⬜ Quadrado</button>
+        <button class="formato-btn" onclick="selecionarFormato('coracao',this)">🔺 Coração</button>
+        <button class="formato-btn" onclick="selecionarFormato('retangular',this)">▭ Retangular</button>
+        <button class="formato-btn" onclick="selecionarFormato('losango',this)">💎 Losango</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="calcularRosto()">
+      🔍 Ver óculos ideais
+    </button>
+  </div>
+  <div id="rosto-result"></div>
+</div>
+
+<!-- TAB: GUIA -->
+<div id="tab-guia" class="screen">
+  <div class="card">
+    <div class="card-title">📖 Como ler as medidas</div>
+    <div style="background:#2C2C2A;border-radius:12px;padding:1rem;text-align:center;margin-bottom:1.25rem">
+      <span style="font-family:monospace;font-size:22px;font-weight:800;color:#AFA9EC;letter-spacing:2px">52□18-140</span>
+      <div style="display:flex;justify-content:space-around;margin-top:.6rem">
+        <span style="font-size:10px;color:#9390D0">Aro</span>
+        <span style="font-size:10px;color:#9390D0">Ponte</span>
+        <span style="font-size:10px;color:#9390D0">Haste</span>
+      </div>
+    </div>
+    <div class="explain-list">
+      <div class="explain-item">
+        <div class="explain-icon">⬜</div>
+        <div class="explain-text">
+          <h3>Aro / Lente — 1º número</h3>
+          <p>Largura horizontal da lente em mm. Comum: 48–58 mm. Rostos menores ficam bem com 48–52 mm, rostos maiores com 54–58 mm.</p>
+        </div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-icon">➖</div>
+        <div class="explain-text">
+          <h3>Ponte / Nariz — 2º número</h3>
+          <p>Distância entre as duas lentes, onde o óculos apoia no nariz. Comum: 14–22 mm. Narizes mais altos pedem ponte menor.</p>
+        </div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-icon">↔️</div>
+        <div class="explain-text">
+          <h3>Haste / Braço — 3º número</h3>
+          <p>Comprimento do braço do óculos, da dobradiça até a ponta. Comum: 135–150 mm. Cabeças menores = haste mais curta.</p>
+        </div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-icon">📐</div>
+        <div class="explain-text">
+          <h3>Largura total do aro</h3>
+          <p>Aro × 2 + Ponte = largura total da frente do óculos. Ex: 52×2+18 = 122 mm. Compare com a largura do seu rosto.</p>
+        </div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-icon">👤</div>
+        <div class="explain-text">
+          <h3>Compatibilidade com rosto</h3>
+          <p><strong>Oval:</strong> qualquer formato. <strong>Redondo:</strong> armações retangulares. <strong>Quadrado:</strong> armações redondas/ovais. <strong>Coração:</strong> armações largas na base.</p>
+        </div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-icon">🔍</div>
+        <div class="explain-text">
+          <h3>Onde encontrar os números</h3>
+          <p>Dentro da haste (braço), na parte interna do aro, ou na plaqueta de nariz. Use uma luz forte para enxergar melhor.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: CONFIG -->
+<div id="tab-config" class="screen">
+  <div class="card">
+    <div class="card-title">⚙️ Configuração da IA</div>
+    <p style="font-size:13px;color:#5F5E5A;margin-bottom:1rem;line-height:1.5">
+      Para analisar fotos, o app usa a API da Anthropic (Claude). Você precisa de uma chave de API gratuita.
+    </p>
+    <div class="field-group">
+      <div class="field-label">🔑 Chave da API (Anthropic)</div>
+      <div class="field-wrap">
+        <input type="password" id="api-key-input" placeholder="sk-or-v1-..." style="font-family:monospace;font-size:13px">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="salvarApiKey()">💾 Salvar chave</button>
+    <div id="key-status" style="margin-top:.75rem;font-size:13px;color:#27500A;display:none">✅ Chave salva com sucesso!</div>
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #EEEDFE">
+      <p style="font-size:12px;color:#5F5E5A;line-height:1.6">
+        📋 <strong>Como obter a chave (OpenRouter — GRÁTIS):</strong><br>
+        1. Acesse <a href="https://openrouter.ai" target="_blank" style="color:#534AB7">openrouter.ai</a><br>
+        2. Crie conta com Google ou email<br>
+        3. Vá em <strong>Keys → Create Key</strong><br>
+        4. Cole aqui e salve<br><br>
+        ✅ Gratuito, sem precisar de cartão.<br>
+        🔒 A chave fica salva só no seu celular.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📱 Instalar no celular</div>
+    <p style="font-size:13px;color:#5F5E5A;margin-bottom:1rem;line-height:1.5">
+      Este é um PWA — pode ser instalado como app nativo no celular.
+    </p>
+    <div style="font-size:12px;color:#5F5E5A;line-height:1.8">
+      <strong>Android (Chrome):</strong><br>
+      Menu ⋮ → "Adicionar à tela inicial"<br><br>
+      <strong>iPhone (Safari):</strong><br>
+      Botão compartilhar → "Adicionar à Tela de Início"
+    </div>
+  </div>
+</div>
+
+<script>
+// API Key management
+function getApiKey() {
+  return localStorage.getItem('oculosid_api_key') || '';
+}
+
+function salvarApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return;
+  localStorage.setItem('oculosid_api_key', key);
+  const status = document.getElementById('key-status');
+  status.style.display = 'block';
+  setTimeout(() => status.style.display = 'none', 3000);
+}
+
+// Load saved key
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = getApiKey();
+  if (saved) document.getElementById('api-key-input').value = saved;
+});
+
+// PWA Install
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').style.display = 'flex';
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+});
+
+// Tab switching
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// Photo handling
+let photoBase64 = null;
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Compress image before sending
+  const canvas = document.createElement('canvas');
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.onload = () => {
+      const maxW = 1200;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.85);
+      const preview = document.getElementById('photo-preview');
+      preview.src = compressed;
+      preview.style.display = 'block';
+      photoBase64 = compressed.split(',')[1];
+      document.getElementById('analisar-btn').disabled = false;
+      document.getElementById('trocar-foto-btn').style.display = 'flex';
+      document.getElementById('foto-result').innerHTML = '';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Render results
+function renderResultado(aro, ponte, haste) {
+  const total = aro * 2 + ponte;
+  const compatArm = aro <= 51
+    ? {txt:'Rostos pequenos/médios', cls:'good', em:'👶'}
+    : aro <= 54
+    ? {txt:'Rostos médios', cls:'good', em:'🙂'}
+    : {txt:'Rostos grandes/largos', cls:'ok', em:'😊'};
+  const compatHaste = haste <= 138
+    ? {txt:'Cabeça menor — haste curta', cls:'tip', em:'📏'}
+    : haste <= 145
+    ? {txt:'Tamanho padrão', cls:'good', em:'✅'}
+    : {txt:'Cabeça maior — haste longa', cls:'tip', em:'📐'};
+  const compatPonte = ponte <= 15
+    ? {txt:'Ponte estreita — nariz mais alto', cls:'tip', em:'👃'}
+    : ponte <= 19
+    ? {txt:'Ponte padrão', cls:'good', em:'✅'}
+    : {txt:'Ponte larga — nariz mais largo', cls:'tip', em:'👃'};
+
+  return `
+  <div class="card">
+    <div class="card-title">✅ Medidas identificadas</div>
+    <div class="measure-grid">
+      <div class="measure-item">
+        <div class="val">${aro}</div>
+        <div class="unit">MM</div>
+        <div class="label">⬜ Aro / Lente</div>
+        <div class="info">1º número</div>
+      </div>
+      <div class="measure-item">
+        <div class="val">${ponte}</div>
+        <div class="unit">MM</div>
+        <div class="label">➖ Ponte / Nariz</div>
+        <div class="info">2º número</div>
+      </div>
+      <div class="measure-item full">
+        <div class="val">${haste}</div>
+        <div class="unit">MM</div>
+        <div class="label">↔️ Haste / Braço</div>
+        <div class="info">3º número</div>
+      </div>
+    </div>
+    <div class="result-box">
+      <h4>Compatibilidade</h4>
+      <div>
+        <span class="compat-badge ${compatArm.cls}">${compatArm.em} ${compatArm.txt}</span>
+        <span class="compat-badge ${compatHaste.cls}">${compatHaste.em} ${compatHaste.txt}</span>
+        <span class="compat-badge ${compatPonte.cls}">${compatPonte.em} ${compatPonte.txt}</span>
+      </div>
+      <p class="total-width">📐 Largura total do aro: <strong>${total} mm</strong> (${aro}×2 + ${ponte})</p>
+    </div>
+  </div>`;
+}
+
+// ===== MODO CÂMERA =====
+let modoCamera = 'live';
+function setModoCamera(modo) {
+  modoCamera = modo;
+  document.getElementById('modo-live-btn').classList.toggle('active', modo === 'live');
+  document.getElementById('modo-cartao-btn').classList.toggle('active', modo === 'cartao');
+  document.getElementById('modo-live').style.display = modo === 'live' ? 'block' : 'none';
+  document.getElementById('modo-cartao').style.display = modo === 'cartao' ? 'block' : 'none';
+  if (modo === 'live') {
+    pararCamera();
+  }
+}
+
+// ===== CÂMERA AO VIVO =====
+let cameraStream = null;
+let cameraInterval = null;
+let captureCountdown = 0;
+let capturedFromLive = null;
+
+// ── DETECTOR DE ROSTO CASEIRO ─────────────────────────────────────────────────
+// Funciona por análise de cor de pele no espaço RGB + bounding-box por projeção.
+// Sem dependências externas. Roda num <canvas> offscreen a ~10 fps.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FD = (() => {
+  // Canvas offscreen pequeno — quanto menor, mais rápido
+  const SCAN_W = 80, SCAN_H = 107; // proporção ~3:4
+  let _canvas = null, _ctx = null;
+
+  function _getCanvas() {
+    if (!_canvas) {
+      _canvas = document.createElement('canvas');
+      _canvas.width = SCAN_W;
+      _canvas.height = SCAN_H;
+      _ctx = _canvas.getContext('2d', { willReadFrequently: true });
+    }
+    return { canvas: _canvas, ctx: _ctx };
+  }
+
+  // Classificador de pele — cobre todas as tonalidades brasileiras.
+  // Usa 3 abordagens em paralelo: RGB normalizado, YCbCr e HSV simplificado.
+  // Basta UMA passar para contar como pele (OR) — mais tolerante.
+  function _ehPele(r, g, b) {
+    // Descarta só extremos absolutos (preto puro / branco puro)
+    if (r < 20 && g < 20 && b < 20) return false;
+    if (r > 252 && g > 252 && b > 252) return false;
+
+    // ── Abordagem 1: RGB normalizado (Kovac adaptado) ──────────────────────
+    // Pele clara a morena: R domina, G médio, B menor
+    const rgbOk =
+      r > 60 && g > 30 && b > 10 &&
+      r > b &&
+      (r - Math.min(g, b)) > 15 &&
+      Math.abs(r - g) > 5;
+
+    // ── Abordagem 2: YCbCr (muito usado em detecção de pele) ───────────────
+    // Converte RGB→YCbCr e verifica faixa de crominância conhecida para pele
+    const Y  =  0.299 * r + 0.587 * g + 0.114 * b;
+    const Cb = -0.169 * r - 0.331 * g + 0.500 * b + 128;
+    const Cr =  0.500 * r - 0.419 * g - 0.081 * b + 128;
+    // Faixas generosas para cobrir pele clara, morena e negra
+    const ycbcrOk =
+      Y > 40 &&
+      Cb >= 85 && Cb <= 140 &&   // original ~77–127, ampliado
+      Cr >= 130 && Cr <= 180;    // original ~133–173, ampliado
+
+    // ── Abordagem 3: HSV simplificado ──────────────────────────────────────
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const diff = max - min;
+    // Hue em graus (apenas quando há saturação mínima)
+    let h = 0;
+    if (diff > 10) {
+      if (max === r) h = 60 * (((g - b) / diff) % 6);
+      else if (max === g) h = 60 * ((b - r) / diff + 2);
+      else h = 60 * ((r - g) / diff + 4);
+      if (h < 0) h += 360;
+    }
+    const s = max === 0 ? 0 : diff / max;
+    const v = max / 255;
+    // Pele: matiz 0–50° (vermelho-laranja-amarelo), saturação baixa-média, luminosidade razoável
+    const hsvOk =
+      h >= 0 && h <= 55 &&
+      s >= 0.08 && s <= 0.80 &&
+      v >= 0.20 && v <= 0.98;
+
+    // Pelo menos 2 das 3 abordagens devem concordar (voto majoritário)
+    const votos = (rgbOk ? 1 : 0) + (ycbcrOk ? 1 : 0) + (hsvOk ? 1 : 0);
+    return votos >= 2;
+  }
+
+  // Projeção horizontal e vertical para achar bounding box.
+  // Usa média móvel suavizada para evitar buracos por barba/óculos/cabelo.
+  function _boundingBox(pixels, w, h) {
+    const projX = new Float32Array(w);
+    const projY = new Float32Array(h);
+    let total = 0;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (_ehPele(pixels[i], pixels[i+1], pixels[i+2])) {
+          projX[x]++;
+          projY[y]++;
+          total++;
+        }
+      }
+    }
+
+    // Suaviza projeções com janela de 3 para tolerar gaps (óculos, barba)
+    for (let x = 1; x < w - 1; x++)
+      projX[x] = (projX[x-1] + projX[x] * 2 + projX[x+1]) / 4;
+    for (let y = 1; y < h - 1; y++)
+      projY[y] = (projY[y-1] + projY[y] * 2 + projY[y+1]) / 4;
+
+    // Threshold baixo: 5% da dimensão oposta (era 8%)
+    const threshX = h * 0.05;
+    const threshY = w * 0.05;
+
+    let x0 = -1, x1 = -1, y0 = -1, y1 = -1;
+    for (let x = 0; x < w; x++) {
+      if (projX[x] >= threshX) { if (x0 < 0) x0 = x; x1 = x; }
+    }
+    for (let y = 0; y < h; y++) {
+      if (projY[y] >= threshY) { if (y0 < 0) y0 = y; y1 = y; }
+    }
+
+    if (x0 < 0 || y0 < 0) return null;
+
+    const bw = x1 - x0;
+    const bh = y1 - y0;
+    if (bw < 3 || bh < 3) return null;
+
+    // Proporção de face humana — mais generoso (0.25–2.2)
+    const ratio = bw / bh;
+    if (ratio < 0.25 || ratio > 2.2) return null;
+
+    // Densidade de pele: baixou de 0.18 para 0.08
+    const bboxArea = bw * bh;
+    const density = total / bboxArea;
+    if (density < 0.08) return null;
+
+    return {
+      x: x0 / w,
+      y: y0 / h,
+      w: bw / w,
+      h: bh / h,
+      density
+    };
+  }
+
+  return {
+    detect(videoEl) {
+      if (!videoEl.videoWidth) return null;
+      const { ctx } = _getCanvas();
+      ctx.drawImage(videoEl, 0, 0, SCAN_W, SCAN_H);
+      const { data } = ctx.getImageData(0, 0, SCAN_W, SCAN_H);
+      return _boundingBox(data, SCAN_W, SCAN_H);
+    },
+    // Retorna true se há pixels de pele suficientes no frame (sem exigir bbox válido)
+    // Usado para distinguir "longe demais" de "sem pessoa"
+    temPele(videoEl) {
+      if (!videoEl.videoWidth) return false;
+      const { ctx } = _getCanvas();
+      ctx.drawImage(videoEl, 0, 0, SCAN_W, SCAN_H);
+      const { data } = ctx.getImageData(0, 0, SCAN_W, SCAN_H);
+      let count = 0;
+      const total = SCAN_W * SCAN_H;
+      for (let i = 0; i < data.length; i += 4) {
+        if (_ehPele(data[i], data[i+1], data[i+2])) count++;
+      }
+      // Mais de 3% dos pixels são pele = alguém está lá, mas longe/mal enquadrado
+      return count / total > 0.03;
+    }
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function iniciarCameraAoVivo() {
+  const podeCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const isSeguro = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  if (!podeCamera || !isSeguro) {
+    usarFallbackInput();
+    return;
+  }
+
+  const wrap     = document.getElementById('live-camera-wrap');
+  const video    = document.getElementById('live-video');
+  const iniciarBtn = document.getElementById('iniciar-camera-btn');
+  const pararBtn   = document.getElementById('parar-camera-btn');
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+    wrap.style.display = 'block';
+    iniciarBtn.style.display = 'none';
+    pararBtn.style.display = 'flex';
+
+    // Aguarda o vídeo ter dimensões para começar o loop
+    video.addEventListener('loadedmetadata', () => {
+      iniciarLoopDeteccao(video);
+    }, { once: true });
+
+    // Fallback: se loadedmetadata demorar, inicia após 1.5s
+    setTimeout(() => {
+      if (!cameraInterval) iniciarLoopDeteccao(video);
+    }, 1500);
+
+  } catch(e) {
+    usarFallbackInput();
+  }
+}
+
+function iniciarLoopDeteccao(video) {
+  if (cameraInterval) return; // já rodando
+
+  const oval      = document.getElementById('face-oval');
+  const indicator = document.getElementById('distance-indicator');
+  const stillEl   = document.getElementById('still-indicator');
+  const rulerEl   = document.getElementById('ruler-overlay');
+
+  // Adiciona botão de captura manual como fallback sempre visível
+  adicionarBotaoCaptura();
+
+  let frameId = null;
+  let lastTime = 0;
+  const FPS = 10;
+
+  // Histórico dos últimos N estados para suavizar (evita piscar)
+  const HIST = 4;
+  const hist = []; // 'none' | 'far' | 'close' | 'ok'
+
+  function estadoSuavizado(estado) {
+    hist.push(estado);
+    if (hist.length > HIST) hist.shift();
+    // Retorna o estado mais frequente no histórico
+    const count = { none: 0, far: 0, close: 0, ok: 0 };
+    hist.forEach(e => count[e]++);
+    return Object.keys(count).reduce((a, b) => count[a] >= count[b] ? a : b);
+  }
+
+  function loop(ts) {
+    frameId = requestAnimationFrame(loop);
+    if (ts - lastTime < 1000 / FPS) return;
+    lastTime = ts;
+
+    const face = FD.detect(video);
+
+    // Classifica o estado bruto
+    let estadoBruto;
+    if (!face) {
+      // Sem bbox válido — tenta inferir se há pele mas longe demais
+      // Faz uma detecção rápida de presença de pele sem exigir bbox
+      estadoBruto = FD.temPele(video) ? 'far' : 'none';
+    } else {
+      const faceW = face.w;
+      if      (faceW < 0.32) estadoBruto = 'far';
+      else if (faceW > 0.72) estadoBruto = 'close';
+      else                   estadoBruto = 'ok';
+    }
+
+    const estado = estadoSuavizado(estadoBruto);
+
+    if (estado === 'none') {
+      oval.className = 'face-guide-oval';
+      indicator.textContent = '👤 Posicione o rosto na moldura';
+      stillEl.style.display = 'none';
+      rulerEl.style.display = 'none';
+      captureCountdown = 0;
+
+    } else if (estado === 'far') {
+      oval.className = 'face-guide-oval too-far';
+      indicator.textContent = '⬆️ Aproxime-se';
+      stillEl.style.display = 'none';
+      rulerEl.style.display = 'none';
+      captureCountdown = 0;
+
+    } else if (estado === 'close') {
+      oval.className = 'face-guide-oval too-close';
+      indicator.textContent = '⬇️ Afaste-se';
+      stillEl.style.display = 'none';
+      rulerEl.style.display = 'none';
+      captureCountdown = 0;
+
+    } else {
+      // Distância OK — contagem regressiva para captura automática
+      captureCountdown++;
+      oval.className = 'face-guide-oval perfect';
+
+      if (rulerEl.style.display === 'none' || !rulerEl.style.display) {
+        mostrarRegua(rulerEl);
+        rulerEl.style.cssText = 'display:flex!important;position:absolute;bottom:52px;left:50%;transform:translateX(-50%);flex-direction:column;align-items:center;gap:4px';
+      }
+
+      // 8 frames a 10fps = ~0.8s parado antes de capturar
+      const restante = 8 - captureCountdown;
+      if (restante > 0) {
+        stillEl.style.cssText = 'display:block!important;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(76,217,123,.9);color:#fff;font-size:12px;font-weight:700;padding:.3rem .8rem;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+        stillEl.textContent = `🟢 Fique parado...`;
+        indicator.textContent = '✅ Distância perfeita';
+      } else {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+        cameraInterval = null;
+        capturarFrameAtual();
+      }
+    }
+  }
+
+  // Guarda referência para poder cancelar no pararCamera
+  cameraInterval = { cancel: () => { if (frameId) cancelAnimationFrame(frameId); frameId = null; } };
+  frameId = requestAnimationFrame(loop);
+}
+
+function usarFallbackInput() {
+  // Câmera ao vivo não disponível — usa input file com capture frontal
+  document.getElementById('modo-live').innerHTML = `
+    <div class="card-ref" style="background:#FFF8E1;border-color:#FFD060">
+      <span style="font-size:20px">⚠️</span>
+      <div>
+        <strong>Câmera ao vivo requer HTTPS</strong>
+        Abra o app pelo link do GitHub Pages para usar este modo. Por agora, tire uma selfie normalmente.
+      </div>
+    </div>
+    <div class="photo-area" onclick="document.getElementById('rosto-live-input').click()">
+      <span class="icon">🤳</span>
+      <p>Tirar selfie</p>
+      <small>câmera frontal</small>
+    </div>
+    <input type="file" id="rosto-live-input" accept="image/*" capture="user" style="display:none" onchange="handleRostoFotoLive(this)">
+    <img id="rosto-live-preview" style="width:100%;border-radius:12px;display:none;margin-bottom:1rem;max-height:280px;object-fit:cover">
+    <button class="btn btn-primary" id="analisar-live-btn" onclick="analisarRostoIA(true)" disabled style="display:none">
+      ✨ Analisar rosto com IA
+    </button>`;
+}
+
+function handleRostoFotoLive(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const canvas = document.createElement('canvas');
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.onload = () => {
+      const maxW = 900;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      capturedFromLive = dataUrl.split(',')[1];
+      const preview = document.getElementById('rosto-live-preview');
+      preview.src = dataUrl;
+      preview.style.display = 'block';
+      const btn = document.getElementById('analisar-live-btn');
+      btn.style.display = 'flex';
+      btn.disabled = false;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function adicionarBotaoCaptura() {
+  const wrap = document.getElementById('live-camera-wrap');
+  if (wrap.querySelector('.capture-manual-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'capture-manual-btn';
+  btn.textContent = '📸 Capturar';
+  btn.style.cssText = 'position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#534AB7;color:#fff;border:none;border-radius:20px;padding:.55rem 1.5rem;font-size:14px;font-weight:700;cursor:pointer;z-index:5';
+  btn.onclick = capturarFrameAtual;
+  wrap.appendChild(btn);
+}
+
+
+function mostrarRegua(rulerEl) {
+  const bar = document.getElementById('ruler-bar');
+  bar.innerHTML = '';
+  const totalMm = 100;
+  const barW = 160;
+  bar.style.width = barW + 'px';
+  for (let mm = 0; mm <= totalMm; mm += 5) {
+    const isMajor = mm % 10 === 0;
+    const tick = document.createElement('div');
+    tick.className = 'ruler-tick ' + (isMajor ? 'major' : 'minor');
+    tick.style.left = Math.round(mm * barW / totalMm) + 'px';
+    bar.appendChild(tick);
+    if (isMajor) {
+      const lbl = document.createElement('div');
+      lbl.className = 'ruler-label';
+      lbl.textContent = mm === 0 ? '0' : mm === totalMm ? '100' : mm;
+      lbl.style.left = Math.round(mm * barW / totalMm) + 'px';
+      bar.appendChild(lbl);
+    }
+  }
+}
+
+async function capturarFrameAtual() {
+  const video = document.getElementById('live-video');
+  const flash = document.getElementById('capture-flash');
+
+  // Flash visual
+  flash.style.opacity = '1';
+  setTimeout(() => flash.style.opacity = '0', 150);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || video.clientWidth;
+  canvas.height = video.videoHeight || video.clientHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  capturedFromLive = dataUrl.split(',')[1];
+
+  pararCamera();
+
+  // Mostra preview e botão de análise
+  const wrap = document.getElementById('live-camera-wrap');
+  wrap.style.display = 'none';
+  const preview = document.createElement('img');
+  preview.src = dataUrl;
+  preview.style.cssText = 'width:100%;border-radius:12px;margin-bottom:1rem;max-height:280px;object-fit:cover';
+  preview.id = 'live-preview';
+  wrap.parentNode.insertBefore(preview, wrap.nextSibling);
+
+  document.getElementById('iniciar-camera-btn').style.display = 'none';
+  document.getElementById('parar-camera-btn').style.display = 'none';
+
+  // Botão analisar e trocar
+  const analisarLiveBtn = document.createElement('button');
+  analisarLiveBtn.className = 'btn btn-primary';
+  analisarLiveBtn.id = 'analisar-live-btn';
+  analisarLiveBtn.innerHTML = '✨ Analisar rosto com IA';
+  analisarLiveBtn.onclick = () => analisarRostoIA(true);
+  preview.parentNode.insertBefore(analisarLiveBtn, preview.nextSibling);
+
+  const trocarBtn = document.createElement('button');
+  trocarBtn.className = 'btn btn-secondary';
+  trocarBtn.style.marginTop = '.5rem';
+  trocarBtn.innerHTML = '🔄 Tirar nova foto';
+  trocarBtn.onclick = () => {
+    const lp = document.getElementById('live-preview');
+    if (lp) lp.remove();
+    document.getElementById('analisar-live-btn')?.remove();
+    trocarBtn.remove();
+    capturedFromLive = null;
+    document.getElementById('live-camera-wrap').style.display = 'none';
+    document.getElementById('iniciar-camera-btn').style.display = 'flex';
+  };
+  analisarLiveBtn.parentNode.insertBefore(trocarBtn, analisarLiveBtn.nextSibling);
+}
+
+function pararCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  if (cameraInterval) {
+    // cameraInterval pode ser objeto { cancel } (RAF) ou número (setInterval legado)
+    if (typeof cameraInterval.cancel === 'function') cameraInterval.cancel();
+    else clearInterval(cameraInterval);
+    cameraInterval = null;
+  }
+  document.getElementById('live-camera-wrap').style.display = 'none';
+  document.getElementById('iniciar-camera-btn').style.display = 'flex';
+  document.getElementById('parar-camera-btn').style.display = 'none';
+  captureCountdown = 0;
+}
+
+// Rosto foto
+let rostoBase64 = null;
+function handleRostoFoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const canvas = document.createElement('canvas');
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.onload = () => {
+      const maxW = 900;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.80);
+      const preview = document.getElementById('rosto-preview');
+      preview.src = compressed;
+      preview.style.display = 'block';
+      rostoBase64 = compressed.split(',')[1];
+      document.getElementById('analisar-rosto-btn').disabled = false;
+      document.getElementById('trocar-rosto-btn').style.display = 'flex';
+      document.getElementById('rosto-result').innerHTML = '';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analisarRostoIA(fromLive = false) {
+  const imgBase64 = fromLive ? capturedFromLive : rostoBase64;
+  if (!imgBase64) return;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    document.getElementById('rosto-result').innerHTML = `
+      <div class="card"><div class="error-box">🔑 Configure a chave da API na aba ⚙️ Config primeiro.</div></div>`;
+    return;
+  }
+
+  const btn = fromLive
+    ? document.getElementById('analisar-live-btn')
+    : document.getElementById('analisar-rosto-btn');
+  if (btn) btn.disabled = true;
+
+  document.getElementById('rosto-result').innerHTML = `
+    <div class="card loading">
+      <div class="loading-spinner"></div>
+      <p style="font-size:14px;font-weight:600">Analisando seu rosto...</p>
+      <p style="font-size:12px;color:#7F77DD;margin-top:.25rem">A IA está medindo proporções faciais</p>
+    </div>`;
+
+  const comCartao = !fromLive && modoCamera === 'cartao';
+
+  try {
+    const prompt = comCartao
+      ? `Analise esta foto de rosto humano de frente. Há um cartão de crédito padrão (85,6mm × 54mm) visível na testa como referência de escala. Use o cartão para calcular as medidas reais do rosto em milímetros. Retorne APENAS JSON válido, sem texto extra, sem markdown:
+{"largura_mm":140,"altura_mm":190,"nariz_mm":35,"formato":"oval","formato_descricao":"descrição breve","encontrado":true}
+Formatos possíveis: oval, redondo, quadrado, coracao, retangular, losango.
+Se não encontrar rosto ou cartão: {"encontrado":false,"motivo":"motivo breve"}.
+Retorne APENAS o JSON, nada mais.`
+      : `Analise esta foto de rosto humano de frente. A foto foi capturada a distância padronizada (rosto ocupando ~55% da largura da imagem). Estime as proporções faciais e retorne APENAS JSON válido, sem texto extra, sem markdown:
+{"largura_mm":140,"altura_mm":190,"nariz_mm":35,"formato":"oval","formato_descricao":"descrição breve","encontrado":true}
+Formatos possíveis: oval, redondo, quadrado, coracao, retangular, losango.
+A largura é de têmpora a têmpora (tipicamente 120-170mm).
+A altura é do queixo à testa (tipicamente 150-230mm).
+O nariz é a largura das narinas (tipicamente 25-50mm).
+Se não houver rosto visível: {"encontrado":false,"motivo":"motivo breve"}.
+Retorne APENAS o JSON, nada mais.`;
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://marciosublim-code.github.io/Oculusid/',
+        'X-Title': 'OculosID'
+      },
+      body: JSON.stringify({
+        model: 'openrouter/auto',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${imgBase64}`}},
+            {type: 'text', text: prompt}
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Erro ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = (data.choices?.[0]?.message?.content || '').replace(/```json|```/g,'').trim();
+    const result = JSON.parse(text);
+
+    if (result.encontrado) {
+      // Preenche os campos manuais com os valores estimados
+      document.getElementById('r-largura').value = result.largura_mm;
+      document.getElementById('r-altura').value = result.altura_mm;
+      document.getElementById('r-nariz').value = result.nariz_mm;
+
+      // Seleciona o formato detectado
+      formatoRosto = result.formato;
+      document.querySelectorAll('.formato-btn').forEach(b => {
+        if (b.textContent.toLowerCase().includes(result.formato.replace('coracao','coração').replace('losango','losango'))) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+
+      // Mostra resultado
+      calcularRosto(result.largura_mm, result.altura_mm, result.nariz_mm, result.formato, result.formato_descricao);
+    } else {
+      document.getElementById('rosto-result').innerHTML = `
+        <div class="card">
+          <div class="error-box">
+            ❌ Não encontrei um rosto na foto.<br><br>
+            ${result.motivo || ''}<br><br>
+            <strong>Dicas:</strong> Tire uma selfie olhando direto para a câmera, com boa iluminação, rosto centralizado.
+          </div>
+        </div>`;
+    }
+  } catch(e) {
+    document.getElementById('rosto-result').innerHTML = `
+      <div class="card"><div class="error-box">⚠️ Erro: ${e.message}. Tente preencher manualmente abaixo.</div></div>`;
+  }
+  if (btn) btn.disabled = false;
+}
+
+// Rosto
+let formatoRosto = null;
+function selecionarFormato(f, el) {
+  formatoRosto = f;
+  document.querySelectorAll('.formato-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function calcularRosto(larguraP, alturaP, narizP, formatoP, fmtDesc) {
+  const largura = larguraP || parseInt(document.getElementById('r-largura').value);
+  const altura = alturaP || parseInt(document.getElementById('r-altura').value);
+  const nariz = narizP || parseInt(document.getElementById('r-nariz').value);
+  const fmtUsado = formatoP || formatoRosto;
+
+  if (!largura || !altura) {
+    document.getElementById('rosto-result').innerHTML = `
+      <div class="card"><div class="error-box">⚠️ Preencha pelo menos a largura e altura do rosto.</div></div>`;
+    return;
+  }
+
+  // Cálculo das medidas ideais
+  const aroIdeal = Math.round(largura * 0.37);
+  const ponteIdeal = nariz ? Math.round(nariz * 0.5) : Math.round(largura * 0.13);
+  const hasteIdeal = Math.round(largura * 1.0);
+
+  const aroMin = aroIdeal - 2;
+  const aroMax = aroIdeal + 2;
+  const ponteMin = ponteIdeal - 1;
+  const ponteMax = ponteIdeal + 2;
+  const hasteMin = hasteIdeal - 5;
+  const hasteMax = hasteIdeal + 5;
+
+  // Formato ideal
+  const formatos = {
+    oval:       {armacao: 'Qualquer formato funciona bem! Retangular, redondo, aviador...', emoji: '✨'},
+    redondo:    {armacao: 'Retangular ou quadrado — para alongar o rosto', emoji: '▭'},
+    quadrado:   {armacao: 'Redondo ou oval — para suavizar os ângulos', emoji: '⭕'},
+    coracao:    {armacao: 'Oval ou com base mais larga — equilibra a testa', emoji: '🥚'},
+    retangular: {armacao: 'Redondo ou com altura maior — para encurtar o rosto', emoji: '⭕'},
+    losango:    {armacao: 'Oval ou sem aro — para destacar os olhos', emoji: '🥚'},
+  };
+
+  const fmt = fmtUsado ? formatos[fmtUsado] : null;
+  const fmtDescFinal = fmtDesc || (fmtUsado ? fmtUsado : null);
+
+  document.getElementById('rosto-result').innerHTML = `
+  <div class="card">
+    <div class="card-title">✅ Óculos ideais para você</div>
+    <div class="measure-grid">
+      <div class="measure-item">
+        <div class="val">${aroMin}–${aroMax}</div>
+        <div class="unit">MM</div>
+        <div class="label">⬜ Aro ideal</div>
+        <div class="info">tamanho da lente</div>
+      </div>
+      <div class="measure-item">
+        <div class="val">${ponteMin}–${ponteMax}</div>
+        <div class="unit">MM</div>
+        <div class="label">➖ Ponte ideal</div>
+        <div class="info">apoio no nariz</div>
+      </div>
+      <div class="measure-item full">
+        <div class="val">${hasteMin}–${hasteMax}</div>
+        <div class="unit">MM</div>
+        <div class="label">↔️ Haste ideal</div>
+        <div class="info">comprimento do braço</div>
+      </div>
+    </div>
+    <div class="result-box">
+      <h4>Recomendações</h4>
+      ${fmt ? `<span class="compat-badge good">${fmt.emoji} ${fmt.armacao}</span>` : ''}
+      ${fmtDescFinal ? `<p style="font-size:12px;color:#5F5E5A;margin-top:.4rem">🤖 IA detectou: <strong>${fmtDescFinal}</strong></p>` : ''}
+      <p style="font-size:12px;color:#534AB7;margin-top:.6rem;line-height:1.5">
+        📐 Largura total ideal: <strong>${Math.round(aroMin*2+ponteMin)}–${Math.round(aroMax*2+ponteMax)} mm</strong><br>
+        <span style="color:#5F5E5A">Procure óculos com medidas próximas a essas ao comprar.</span>
+      </p>
+    </div>
+  </div>`;
+
+  document.getElementById('rosto-result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// Analyze photo with AI
+async function analisarFoto() {
+  if (!photoBase64) return;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    document.getElementById('foto-result').innerHTML = `
+      <div class="card">
+        <div class="error-box">🔑 Você precisa configurar a chave da API primeiro. Vá na aba ⚙️ Config e adicione sua chave da Anthropic.</div>
+      </div>`;
+    return;
+  }
+
+  const btn = document.getElementById('analisar-btn');
+  btn.disabled = true;
+  document.getElementById('foto-result').innerHTML = `
+    <div class="card loading">
+      <div class="loading-spinner"></div>
+      <p style="font-size:14px;font-weight:600">Analisando com IA...</p>
+      <p style="font-size:12px;color:#7F77DD;margin-top:.25rem">Identificando os números na foto</p>
+    </div>`;
+
+  try {
+    const prompt = 'Esta é uma foto de óculos de grau. Procure os números de medida gravados/impressos na haste (braço) ou no aro, no formato "aro□ponte-haste" ou "aro-ponte-haste" (exemplo: 52□18-140 ou 52-18-140). O primeiro número é o aro (40-70mm), o segundo é a ponte (10-30mm), o terceiro é a haste (120-165mm). Responda APENAS com JSON válido, sem nenhum texto extra, sem markdown, sem explicação: {"aro":52,"ponte":18,"haste":140,"encontrado":true} ou se não encontrar: {"encontrado":false,"motivo":"motivo breve"}. Só JSON, nada mais.';
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://marciosublim-code.github.io/Oculusid/',
+        'X-Title': 'OculosID'
+      },
+      body: JSON.stringify({
+        model: 'openrouter/auto',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${photoBase64}`}},
+            {type: 'text', text: prompt}
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Erro ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = (data.choices?.[0]?.message?.content || '').replace(/```json|```/g, '').trim();
+    const result = JSON.parse(text);
+
+    if (result.encontrado) {
+      document.getElementById('foto-result').innerHTML = renderResultado(result.aro, result.ponte, result.haste);
+    } else {
+      document.getElementById('foto-result').innerHTML = `
+        <div class="card">
+          <div class="error-box">
+            ❌ Não consegui identificar os números.<br><br>
+            ${result.motivo ? result.motivo + '<br><br>' : ''}
+            <strong>Dicas:</strong> Fotografe mais de perto a parte interna da haste, com boa iluminação. Os números são pequenos — tente dar zoom na câmera.
+          </div>
+          <button class="btn btn-secondary" style="margin-top:.75rem" onclick="document.getElementById('camera-input').click()">
+            🔄 Tirar outra foto
+          </button>
+        </div>`;
+    }
+  } catch(e) {
+    const isAuthError = e.message.includes('401') || e.message.includes('API_KEY') || e.message.includes('key');
+    document.getElementById('foto-result').innerHTML = `
+      <div class="card">
+        <div class="error-box">
+          ${isAuthError
+            ? '🔑 Chave de API inválida ou expirada. Vá em ⚙️ Config e verifique sua chave.'
+            : `⚠️ Erro ao analisar: ${e.message}. Verifique sua conexão ou use a aba Manual.`}
+        </div>
+      </div>`;
+  }
+  btn.disabled = false;
+}
+
+// Analyze manual input
+function analisarManual() {
+  const aro = parseInt(document.getElementById('m-aro').value);
+  const ponte = parseInt(document.getElementById('m-ponte').value);
+  const haste = parseInt(document.getElementById('m-haste').value);
+
+  if (!aro || !ponte || !haste || aro < 40 || aro > 70 || ponte < 10 || ponte > 30 || haste < 120 || haste > 165) {
+    document.getElementById('manual-result').innerHTML = `
+      <div class="card">
+        <div class="error-box">
+          ⚠️ Verifique os valores:<br>
+          • Aro: 40–70 mm<br>
+          • Ponte: 10–30 mm<br>
+          • Haste: 120–165 mm
+        </div>
+      </div>`;
+    return;
+  }
+  document.getElementById('manual-result').innerHTML = renderResultado(aro, ponte, haste);
+  document.getElementById('manual-result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
